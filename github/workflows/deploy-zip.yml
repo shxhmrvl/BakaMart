@@ -1,0 +1,50 @@
+
+name: Deploy BakaMart ZIP
+
+on:
+  push:
+    branches: ["main"]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+concurrency:
+  group: pages
+  cancel-in-progress: true
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Extract BakaMart prototype
+        run: |
+          set -e
+          ZIP_FILE="$(find . -maxdepth 2 -name 'BakaMart-Prototype-v0.1.zip' -print -quit)"
+          if [ -z "$ZIP_FILE" ]; then
+            echo "Prototype ZIP not found"
+            exit 1
+          fi
+          mkdir -p site
+          unzip -o "$ZIP_FILE" -d extracted
+          cp -R extracted/BakaMart/. site/
+
+      - name: Configure Pages
+        uses: actions/configure-pages@v5
+
+      - name: Upload Pages artifact
+        uses: actions/upload-pages-artifact@v3
+        with:
+          path: site
+
+      - name: Deploy to GitHub Pages
+        id: deployment
+        uses: actions/deploy-pages@v4
